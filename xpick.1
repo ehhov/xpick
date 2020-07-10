@@ -1,0 +1,103 @@
+.TH XPICK 1 "July 2020" "version 0"
+.SH NAME
+xpick \- a simple color picker for X
+.SH SYNOPSIS
+.B xpick
+.RB [ \-mr ]
+.RB [ \-s
+.IR scale ]
+.RB [ \-i
+.IR increment ]
+.RB [ \-l
+.IR length ]
+.RB [ \-w
+.IR width ]
+.RB [ \-g
+.IR height ]
+.RB [ \-h ]
+.SH DESCRIPTION
+.B xpick
+is a simple color picker for X. I wrote because I haven't found any other 
+color picker that would also magnify and work as expected. The program closest 
+to my needs is
+.IR deepin-picker (1).
+.P
+This program captures the screen, creates a window showing a magnified image, 
+and prints the picked color in the regular HEX format.
+.SH OPTIONS
+.TP
+.B \-m
+use the program as a magnifier only, do not print anything.
+.TP
+.B \-r
+refresh the screen image (which is shown magnified) on every mouse motion.
+.TP
+.BI \-s " scale"
+set the magnification factor.
+.TP
+.BI \-i " increment"
+set the magnified area side increment for real-time change. When negative, it 
+is expressed in percent of the smallest screen dimension.
+.TP
+.BI \-l " length"
+set the magnified area side length. When negative, it is expressed in percent 
+of the smallest screen dimension.
+.TP
+.BI \-w " width"
+set the magnified area width. When negative, it is expressed in percent of the 
+screen width.
+.TP
+.BI \-g " height"
+set the magnified area height. When negative, it is expressed in percent of 
+the screen height.
+.TP
+.B \-h
+print a small help message.
+.SH USAGE
+.TP
+.B Any Mouse Button
+print the picked color to the standard output (if
+.B \-m
+is not set) and exit.
+.TP
+.BR Enter " or " Space
+print the picked color (even if
+.B \-m
+is set) and continue.
+.TP
+.B r
+refresh the screen image.
+.TP
+.BR Down , j "  " Up , k "  " Left , h "  " Right , l
+move the magnified area.
+.TP
+.B m
+toggle working as a magnifier only.
+.TP
+.B t
+toggle refreshing the screen image on mouse motion.
+.TP
+.B i
+increase the magnified area.
+.TP
+.B d
+decrease the magnified area.
+.TP
+.BR = " (+ without Shift) or " o
+increase the magnification factor by 1.
+.TP
+.BR - " or " s
+decrease the magnification factor by 1.
+.TP
+.B [1-0]
+set the magnification factor to 1-10.
+.TP
+.BR Escape " or " q
+exit successfully.
+.TP
+.B Any Other Key
+exit unsuccessfylly.
+.SH AUTHOR
+Written by Kerim Guseynov.
+.P
+The project is located at https://github.com/ehhov/xpick.

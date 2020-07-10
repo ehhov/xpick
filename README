@@ -1,0 +1,9 @@
+xpick - color picker for X
+==========================
+
+xpick captures the screen, creates a window showing a magnified image, 
+and prints the picked color in the regular HEX format. It also has 
+a bunch of command-line options and run time keyboard commands. For more 
+information, see the man page.
+
+It is written in pure Xlib and has no other dependencies.
