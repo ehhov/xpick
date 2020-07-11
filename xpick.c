@@ -343,6 +343,10 @@ main(int argc, char *argv[])
 				case XK_t:
 					rflag = !rflag;
 					break;
+				case XK_p:
+					w = h = MIN(w, h);
+					scale = w/5;
+					goto changed;
 				case XK_i:
 					h += increment;
 					w += increment;
