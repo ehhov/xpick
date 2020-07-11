@@ -304,8 +304,11 @@ main(int argc, char *argv[])
 				break;
 			case KeyPress:
 				switch (XevKeysym(dpy, ev)) {
-				case XK_space:
 				case XK_Return:
+					done = 1;
+					printcolor(dpy, img, stdout);
+					break;
+				case XK_space:
 					printcolor(dpy, img, stdout);
 					break;
 				/* XWrapPointer should generate MotionNotify */
