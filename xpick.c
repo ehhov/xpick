@@ -315,22 +315,22 @@ main(int argc, char *argv[])
 				case XK_k:
 				case XK_Up:
 					XWarpPointer(dpy, None, None, 0, 0, 0, 0, \
-					             0, -MAX(1, h/scale/2 - 1));
+					             0, -MAX(1, h/scale/2 - 3));
 					break;
 				case XK_j:
 				case XK_Down:
 					XWarpPointer(dpy, None, None, 0, 0, 0, 0, \
-					             0, MAX(1, h/scale/2 - 1));
+					             0, MAX(1, h/scale/2 - 3));
 					break;
 				case XK_h:
 				case XK_Left:
 					XWarpPointer(dpy, None, None, 0, 0, 0, 0, \
-					             -MAX(1, w/scale/2 - 1), 0);
+					             -MAX(1, w/scale/2 - 3), 0);
 					break;
 				case XK_l:
 				case XK_Right:
 					XWarpPointer(dpy, None, None, 0, 0, 0, 0, \
-					             MAX(1, w/scale/2 - 1), 0);
+					             MAX(1, w/scale/2 - 3), 0);
 					break;
 					break;
 				case XK_r:
@@ -348,7 +348,7 @@ main(int argc, char *argv[])
 					break;
 				case XK_p:
 					w = h = MIN(w, h);
-					scale = w/5;
+					scale = w/9;
 					goto changed;
 				case XK_i:
 					h += increment;
