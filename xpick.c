@@ -255,9 +255,8 @@ main(int argc, char *argv[])
 	sattr.override_redirect = True;
 	sattr.cursor = cursor;
 	win = XCreateWindow(dpy, DefaultRootWindow(dpy), 0, 0, 1, 1, 0, \
-	                    DefaultDepth(dpy, DefaultScreen(dpy)), InputOutput, \
-	                    DefaultVisual(dpy, DefaultScreen(dpy)), CWEventMask | \
-	                    CWBackPixel | CWOverrideRedirect | CWCursor, &sattr);
+	                    CopyFromParent, InputOutput, CopyFromParent, CWEventMask \
+	                    | CWBackPixel | CWOverrideRedirect | CWCursor, &sattr);
 	if (!win) {
 		fprintf(stderr, "failed to create a window.\n");
 		done = -1;
