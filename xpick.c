@@ -292,8 +292,8 @@ main(int argc, char *argv[])
 			XNextEvent(dpy, &ev);
 			switch (ev.type) {
 			case MotionNotify:
-				x = ev.xbutton.x_root;
-				y = ev.xbutton.y_root;
+				x = ev.xmotion.x_root;
+				y = ev.xmotion.y_root;
 				if (rflag)
 					refresh(dpy, win, &orig);
 				wincontent(dpy, win, gci, gcl, orig, img, \
