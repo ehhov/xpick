@@ -200,7 +200,7 @@ main(int argc, char *argv[])
 				usage(stdout);
 				return 0;
 			default:
-				fprintf(stderr, "unknown option -%c.\n", *opt);
+				fprintf(stderr, "Unknown option -%c.\n", *opt);
 				usage(stderr);
 				return 1;
 			}
@@ -214,7 +214,7 @@ main(int argc, char *argv[])
 
 	dpy = XOpenDisplay(NULL);
 	if (dpy == NULL) {
-		fprintf(stderr, "failed to open display.\n");
+		fprintf(stderr, "Failed to open display.\n");
 		return 1;
 	}
 
@@ -232,13 +232,13 @@ main(int argc, char *argv[])
 
 	orig = rootimg(dpy);
 	if (orig == NULL) {
-		fprintf(stderr, "failed to get root image.\n");
+		fprintf(stderr, "Failed to get root image.\n");
 		done = -1;
 		goto close;
 	}
 	img = allocimg(dpy, w, h, scale);
 	if (img == NULL) {
-		fprintf(stderr, "failed to create an auxiliary XImage.\n");
+		fprintf(stderr, "Failed to create an auxiliary XImage.\n");
 		done = -1;
 		goto notimg;
 	}
@@ -257,7 +257,7 @@ main(int argc, char *argv[])
 	                    CopyFromParent, InputOutput, CopyFromParent, CWEventMask \
 	                    | CWBackPixel | CWOverrideRedirect | CWCursor, &sattr);
 	if (!win) {
-		fprintf(stderr, "failed to create a window.\n");
+		fprintf(stderr, "Failed to create a window.\n");
 		done = -1;
 		goto notwin;
 	}
@@ -405,7 +405,7 @@ changed:
 					done = 1;
 					break;
 				default:
-					fprintf(stderr, "unknown key '%s'. exitting.\n", \
+					fprintf(stderr, "Unknown key '%s'. Exitting.\n", \
 					        XKeysymToString(XevKeysym(dpy, ev)));
 					done = -1;
 					break;
