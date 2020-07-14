@@ -300,9 +300,17 @@ main(int argc, char *argv[])
 				           x, y, w, h, scale, mflag);
 				break;
 			case ButtonPress:
-				done = 1;
-				if (!mflag)
-					printcolor(dpy, img, stdout);
+				if (ev.xbutton.button == Button4) {
+					scale = scale + 1;
+					goto changed;
+				} else if (ev.xbutton.button == Button5) {
+					scale = MAX(1, scale - 1);
+					goto changed;
+				} else if (ev.xbutton.button < Button4){
+					done = 1;
+					if (!mflag)
+						printcolor(dpy, img, stdout);
+				}
 				break;
 			case KeyPress:
 				switch (XevKeysym(dpy, ev)) {
