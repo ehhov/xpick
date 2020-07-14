@@ -93,14 +93,14 @@ refresh(Display *dpy, Window win, XImage **orig)
 }
 
 void
-printcolor(Display *dpy, XImage *img, FILE *output)
+printcolor(Display *dpy, XImage *img)
 {
 	XColor c;
 	c.pixel = XGetPixel(img, img->width/2, img->height/2);
 	XQueryColor(dpy, DefaultColormap(dpy, DefaultScreen(dpy)), &c);
-	fprintf(output, "#%02x%02x%02x", c.red >> 8, c.green >> 8, c.blue >> 8);
+	printf("#%02x%02x%02x", c.red >> 8, c.green >> 8, c.blue >> 8);
 	if (!done)
-		fprintf(output, "\n");
+		printf("\n");
 }
 
 int
@@ -309,17 +309,17 @@ main(int argc, char *argv[])
 				} else if (ev.xbutton.button < Button4){
 					done = 1;
 					if (!mflag)
-						printcolor(dpy, img, stdout);
+						printcolor(dpy, img);
 				}
 				break;
 			case KeyPress:
 				switch (XevKeysym(dpy, ev)) {
 				case XK_Return:
 					done = 1;
-					printcolor(dpy, img, stdout);
+					printcolor(dpy, img);
 					break;
 				case XK_space:
-					printcolor(dpy, img, stdout);
+					printcolor(dpy, img);
 					break;
 				/* XWrapPointer should generate MotionNotify */
 				case XK_k:
