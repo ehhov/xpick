@@ -138,7 +138,7 @@ main(int argc, char *argv[])
 	int fd;
 	fd_set fds;
 	struct sigaction action;
-	int x, y, w = -30, h = -30, scale = 5, increment = -5;
+	int grab, x, y, w = -30, h = -30, scale = 5, increment = -5;
 	int mflag = 0, rflag = 0, square = 1;
 
 	cmd = argv[0];
@@ -279,6 +279,10 @@ main(int argc, char *argv[])
 
 	wincontent(dpy, win, gci, gcl, orig, img, x, y, w, h, scale, mflag);
 
+	/* try to grab pointer to not let it out of the window */
+	grab = XGrabPointer(dpy, win, True, NoEventMask, GrabModeAsync, \
+	                    GrabModeAsync, win, None, CurrentTime);
+
 	fd = ConnectionNumber(dpy);
 	while (!done) {
 		FD_ZERO(&fds);
@@ -417,9 +421,11 @@ changed:
 		}
 	}
 
-	XDestroyWindow(dpy, win);
 	XFreeGC(dpy, gcl);
 	XFreeGC(dpy, gci);
+	if (grab == GrabSuccess)
+		XUngrabPointer(dpy, CurrentTime);
+	XDestroyWindow(dpy, win);
 notwin:
 	XFreeCursor(dpy, cursor);
 	XDestroyImage(img);
