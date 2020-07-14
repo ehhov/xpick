@@ -246,9 +246,8 @@ main(int argc, char *argv[])
 	empty = XCreateBitmapFromData(dpy, DefaultRootWindow(dpy), &(char){0}, 1, 1);
 	cursor = XCreatePixmapCursor(dpy, empty, empty, &(XColor){0}, &(XColor){0}, 0, 0);
 
-	/* fd and win will be changed later, they are not used here */
-	XQueryPointer(dpy, DefaultRootWindow(dpy), &win, &win, &x, &y, \
-	              &fd, &fd, (unsigned int *)&fd);
+	XQueryPointer(dpy, DefaultRootWindow(dpy), &(Window){0}, &(Window){0}, \
+	              &x, &y, &(int){0}, &(int){0}, &(unsigned int){0});
 
 	sattr.event_mask = ButtonPressMask | PointerMotionMask | KeyPressMask;
 	sattr.background_pixel = BlackPixel(dpy, DefaultScreen(dpy));
