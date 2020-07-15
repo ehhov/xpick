@@ -103,6 +103,19 @@ printcolor(Display *dpy, XImage *img)
 		printf("\n");
 }
 
+void
+focus(Display *dpy, Window win)
+{
+	Window current;
+	int i = 0;
+	while (i++ < 100) {
+		XGetInputFocus(dpy, &current, &(int){0});
+		if (current == win)
+			return;
+		XSetInputFocus(dpy, win, RevertToParent, CurrentTime);
+	}
+}
+
 int
 intarg(int *argc, char **argv[], char **opt)
 {
@@ -249,7 +262,8 @@ main(int argc, char *argv[])
 	XQueryPointer(dpy, DefaultRootWindow(dpy), &(Window){0}, &(Window){0}, \
 	              &x, &y, &(int){0}, &(int){0}, &(unsigned int){0});
 
-	sattr.event_mask = ButtonPressMask | PointerMotionMask | KeyPressMask;
+	sattr.event_mask = ButtonPressMask | PointerMotionMask | KeyPressMask \
+	                   | FocusChangeMask;
 	sattr.background_pixel = BlackPixel(dpy, DefaultScreen(dpy));
 	sattr.override_redirect = True;
 	sattr.cursor = cursor;
@@ -262,7 +276,7 @@ main(int argc, char *argv[])
 		goto notwin;
 	}
 	XMapWindow(dpy, win);
-	XSetInputFocus(dpy, win, RevertToPointerRoot, CurrentTime);
+	focus(dpy, win);
 
 	gcval.function = GXcopy;
 	gcval.plane_mask = AllPlanes;
@@ -422,6 +436,9 @@ changed:
 					done = -1;
 					break;
 				}
+				break;
+			case FocusOut:
+				focus(dpy, win);
 				break;
 			default:
 				break;
