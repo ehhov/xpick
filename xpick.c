@@ -155,7 +155,12 @@ main(int argc, char *argv[])
 	int mflag = 0, rflag = 0, square = 1;
 
 	cmd = argv[0];
-	for (argc--, argv++; argv[0] && argv[0][0] == '-' && argv[0][1]; argc--, argv++) {
+	for (argc--, argv++; argv[0]; argc--, argv++) {
+		if (argv[0][0] != '-') {
+			fprintf(stderr, "Unknown argument %s.\n", argv[0]);
+			usage(stderr);
+			return 1;
+		}
 		for (char *opt = ++argv[0]; opt[0]; opt++) {
 			switch (*opt) {
 			case 'm':
