@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
-#include <sys/select.h>
+#include <poll.h>
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -148,8 +148,7 @@ main(int argc, char *argv[])
 	XGCValues gcval;
 	Pixmap empty;
 	Cursor cursor;
-	int fd;
-	fd_set fds;
+	struct pollfd fds[1];
 	struct sigaction action;
 	int grab, x, y, w = -30, h = -30, scale = 5, increment = -5;
 	int mflag = 0, rflag = 0, square = 1;
@@ -302,11 +301,10 @@ main(int argc, char *argv[])
 	grab = XGrabPointer(dpy, win, True, NoEventMask, GrabModeAsync, \
 	                    GrabModeAsync, win, None, CurrentTime);
 
-	fd = ConnectionNumber(dpy);
+	fds[0].fd = ConnectionNumber(dpy);
+	fds[0].events = POLLIN;
 	while (!done) {
-		FD_ZERO(&fds);
-		FD_SET(fd, &fds);
-		select(fd + 1, &fds, NULL, NULL, NULL);
+		poll(fds, 1, -1);
 		while (XPending(dpy)) {
 			XNextEvent(dpy, &ev);
 			switch (ev.type) {
