@@ -6,4 +6,14 @@ and prints the picked color in the regular HEX format. It also has
 a bunch of command-line options and run time keyboard commands. For more 
 information, see the man page.
 
-It is written in pure Xlib and has no other dependencies.
+
+Dependencies
+------------
+xpick is written in pure Xlib and has no other dependencies.
+
+
+Installation
+------------
+Edit the first lines of Makefile to fit your system and run
+
+    make install
