@@ -3,7 +3,7 @@
 xpick \- a simple color picker for X
 .SH SYNOPSIS
 .B xpick
-.RB [ \-mr ]
+.RB [ \-mnr ]
 .RB [ \-s
 .IR scale ]
 .RB [ \-i
@@ -28,6 +28,10 @@ and prints the picked color in the regular HEX format.
 .TP
 .B \-m
 use the program as a magnifier only, do not print anything.
+.TP
+.B \-n
+don't print a newline after the last color; useful for placing output to the 
+clipboard.
 .TP
 .B \-r
 refresh the screen image (which is shown magnified) on mouse motion.

@@ -32,7 +32,7 @@ finish(int signal)
 void
 usage(FILE *output)
 {
-	fprintf(output, "Usage: %s [-mr] [-s scale] [-i increment] [-l length]" \
+	fprintf(output, "Usage: %s [-mnr] [-s scale] [-i increment] [-l length]" \
 	                " [-w width] [-g height] [-h]\n", cmd);
 }
 
@@ -93,13 +93,13 @@ refresh(Display *dpy, Window win, XImage **orig)
 }
 
 void
-printcolor(Display *dpy, XImage *img)
+printcolor(Display *dpy, XImage *img, int newline)
 {
 	XColor c;
 	c.pixel = XGetPixel(img, img->width/2, img->height/2);
 	XQueryColor(dpy, DefaultColormap(dpy, DefaultScreen(dpy)), &c);
 	printf("#%02x%02x%02x", c.red >> 8, c.green >> 8, c.blue >> 8);
-	if (!done)
+	if (newline)
 		putc('\n', stdout);
 }
 
@@ -151,7 +151,7 @@ main(int argc, char *argv[])
 	struct pollfd fds[1];
 	struct sigaction action;
 	int grab, x, y, w = -30, h = -30, scale = 5, increment = -5;
-	int mflag = 0, rflag = 0, square = 1;
+	int mflag = 0, rflag = 0, newline = 1, square = 1;
 
 	cmd = argv[0];
 	for (argc--, argv++; argv[0]; argc--, argv++) {
@@ -165,6 +165,10 @@ main(int argc, char *argv[])
 			case 'm':
 				/* use the program as a magnifier */
 				mflag = 1;
+				break;
+			case 'n':
+				/* don't print a newline after the last color */
+				newline = 0;
 				break;
 			case 'r':
 				/* refresh on pointer motion */
@@ -326,17 +330,17 @@ main(int argc, char *argv[])
 				} else if (ev.xbutton.button < Button4){
 					done = 1;
 					if (!mflag)
-						printcolor(dpy, img);
+						printcolor(dpy, img, newline);
 				}
 				break;
 			case KeyPress:
 				switch (XevKeysym(dpy, ev)) {
 				case XK_Return:
 					done = 1;
-					printcolor(dpy, img);
+					printcolor(dpy, img, newline);
 					break;
 				case XK_space:
-					printcolor(dpy, img);
+					printcolor(dpy, img, 1);
 					break;
 				/* XWrapPointer should generate MotionNotify */
 				case XK_k:
