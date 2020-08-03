@@ -120,19 +120,26 @@ focus(Display *dpy, Window win)
 }
 
 int
-intarg(int *argc, char **argv[], char **opt)
+intarg(int *argc, char ***argv, char **opt)
 {
+	char *str, *end;
 	int ret;
 
 	if ((*opt)[1]) {
-		*opt += 1;
-		ret = (int)strtol(*opt, NULL, 0);
+		str = *opt + 1;
 		*opt += strlen(*opt) - 1;
 	} else if ((*argv)[1]) {
 		*argc -= 1; *argv += 1;
-		ret = (int)strtol((*argv)[0], NULL, 0);
+		str = **argv;
 	} else {
 		fprintf(stderr, "-%c flag needs an argument.\n", **opt);
+		exit(1);
+	}
+
+	ret = (int)strtol(str, &end, 0);
+
+	if (*end) {
+		fprintf(stderr, "Cannot convert '%s' to int.\n", str);
 		exit(1);
 	}
 
