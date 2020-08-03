@@ -3,6 +3,7 @@
 #include <string.h>
 #include <signal.h>
 #include <poll.h>
+#include <time.h>
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -106,6 +107,7 @@ printcolor(Display *dpy, XImage *img, int newline)
 void
 focus(Display *dpy, Window win)
 {
+	static struct timespec ts = {.tv_sec = 0, .tv_nsec = 10000000};
 	Window current;
 	int i = 0;
 	while (i++ < 100) {
@@ -113,6 +115,7 @@ focus(Display *dpy, Window win)
 		if (current == win)
 			return;
 		XSetInputFocus(dpy, win, RevertToParent, CurrentTime);
+		nanosleep(&ts, NULL);
 	}
 }
 
