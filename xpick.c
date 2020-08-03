@@ -100,7 +100,7 @@ printcolor(Display *dpy, XImage *img)
 	XQueryColor(dpy, DefaultColormap(dpy, DefaultScreen(dpy)), &c);
 	printf("#%02x%02x%02x", c.red >> 8, c.green >> 8, c.blue >> 8);
 	if (!done)
-		printf("\n");
+		putc('\n', stdout);
 }
 
 void
@@ -174,7 +174,7 @@ main(int argc, char *argv[])
 				/* magnification factor */
 				scale = intarg(&argc, &argv, &opt);
 				if (scale < 1) {
-					fprintf(stderr, "scale must be 1 or more.\n");
+					fputs("scale must be 1 or more.\n", stderr);
 					return 1;
 				}
 				break;
@@ -182,7 +182,7 @@ main(int argc, char *argv[])
 				/* magnifying area increment. in percent when < 0 */
 				increment = intarg(&argc, &argv, &opt);
 				if (increment == 0) {
-					fprintf(stderr, "increment cannot be zero.\n");
+					fputs("increment cannot be zero.\n", stderr);
 					return 1;
 				}
 				break;
@@ -190,7 +190,7 @@ main(int argc, char *argv[])
 				/* side length. in percent when < 0 */
 				w = h = intarg(&argc, &argv, &opt);
 				if (w == 0) {
-					fprintf(stderr, "length cannot be zero.\n");
+					fputs("length cannot be zero.\n", stderr);
 					return 1;
 				}
 				square = 1;
@@ -199,7 +199,7 @@ main(int argc, char *argv[])
 				/* width */
 				w = intarg(&argc, &argv, &opt);
 				if (w == 0) {
-					fprintf(stderr, "width cannot be zero.\n");
+					fputs("width cannot be zero.\n", stderr);
 					return 1;
 				}
 				square = 0;
@@ -208,7 +208,7 @@ main(int argc, char *argv[])
 				/* height */
 				h = intarg(&argc, &argv, &opt);
 				if (h == 0) {
-					fprintf(stderr, "height cannot be zero.\n");
+					fputs("height cannot be zero.\n", stderr);
 					return 1;
 				}
 				square = 0;
@@ -231,7 +231,7 @@ main(int argc, char *argv[])
 
 	dpy = XOpenDisplay(NULL);
 	if (dpy == NULL) {
-		fprintf(stderr, "Failed to open display.\n");
+		fputs("Failed to open display.\n", stderr);
 		return 1;
 	}
 
@@ -249,13 +249,13 @@ main(int argc, char *argv[])
 
 	orig = rootimg(dpy);
 	if (orig == NULL) {
-		fprintf(stderr, "Failed to get root image.\n");
+		fputs("Failed to get root image.\n", stderr);
 		done = -1;
 		goto close;
 	}
 	img = allocimg(dpy, w, h, scale);
 	if (img == NULL) {
-		fprintf(stderr, "Failed to create an auxiliary XImage.\n");
+		fputs("Failed to create an auxiliary XImage.\n", stderr);
 		done = -1;
 		goto notimg;
 	}
@@ -275,7 +275,7 @@ main(int argc, char *argv[])
 	                    CopyFromParent, InputOutput, CopyFromParent, CWEventMask \
 	                    | CWBackPixel | CWOverrideRedirect | CWCursor, &sattr);
 	if (!win) {
-		fprintf(stderr, "Failed to create a window.\n");
+		fputs("Failed to create a window.\n", stderr);
 		done = -1;
 		goto notwin;
 	}
