@@ -3,7 +3,7 @@
 xpick \- a simple color picker for X
 .SH SYNOPSIS
 .B xpick
-.RB [ \-mnr ]
+.RB [ \-amnr ]
 .RB [ \-s
 .IR scale ]
 .RB [ \-i
@@ -14,6 +14,8 @@ xpick \- a simple color picker for X
 .IR width ]
 .RB [ \-g
 .IR height ]
+.RB [ \-f
+.IR windowid ]
 .RB [ \-h ]
 .SH DESCRIPTION
 .B xpick
@@ -25,6 +27,9 @@ to my needs is
 This program captures the screen, creates a window showing a magnified image, 
 and prints the picked color in the regular HEX format.
 .SH OPTIONS
+.TP
+.B \-a
+pick a color from the window under the pointer.
 .TP
 .B \-m
 use the program as a magnifier only, do not print anything.
@@ -54,6 +59,9 @@ screen width.
 .BI \-g " height"
 set the magnified area height. When negative, it is expressed in percent of 
 the screen height.
+.TP
+.BI \-f " windowid"
+pick a color from the window specified by id.
 .TP
 .B \-h
 print a small help message.

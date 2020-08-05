@@ -13,117 +13,49 @@
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define MINMAX(min, max, val) ((val) > (min) && (val) < (max) ? (val) : \
-                               ((val) - ((max)+(min))/2 > 0 ? (max) : (min)))
-#define rootw(dpy) WidthOfScreen(DefaultScreenOfDisplay(dpy))
-#define rooth(dpy) HeightOfScreen(DefaultScreenOfDisplay(dpy))
-#define rootimg(dpy) XGetImage(dpy, DefaultRootWindow(dpy), 0, 0, \
-                               rootw(dpy), rooth(dpy), AllPlanes, ZPixmap);
-#define XevKeysym(dpy, ev) XkbKeycodeToKeysym(dpy, (ev).xkey.keycode, 0, 0)
+#define MINMAX(min, max, val) ((val) >= (min) && (val) <= (max) ? (val) : \
+                               ((val) > (max) ? (max) : (min)))
+
+void finish(int signal);
+void usage(FILE *output);
+long intarg(int *argc, char ***argv, char **opt);
+void winchanged(void);
+void wincontent(void);
+void refresh(void);
+void focus(void);
+void printcolor(int newline);
+void keypress(KeySym key);
 
 int done = 0;
 char *cmd;
+Display *dpy;
+XImage *simg = NULL, *img = NULL;
+GC gci, gcl;
+Pixmap empty;
+Cursor cursor;
+Window win = 0, swin = 0, root;
+int scr, sx, sy, sw, sh;
+int x, y, w, h, scale, increment;
+int opt_n, opt_m, opt_r;
 
 void
 finish(int signal)
 {
-	done = 1;
+	done = -1;
 }
 
 void
 usage(FILE *output)
 {
-	fprintf(output, "Usage: %s [-mnr] [-s scale] [-i increment] [-l length]" \
-	                " [-w width] [-g height] [-h]\n", cmd);
+	fprintf(output, "Usage: %s [-amnr] [-s scale] [-i increment] [-l length]" \
+	                " [-w width] [-g height] [-f windowid] [-h]\n", cmd);
 }
 
-XImage *
-allocimg(Display *dpy, int w, int h, int s)
-{
-	static XImage *img;
-	w = MAX(s, w/s * s);
-	h = MAX(s, h/s * s);
-
-	img = XCreateImage(dpy, DefaultVisual(dpy, DefaultScreen(dpy)), \
-	                   DefaultDepth(dpy, DefaultScreen(dpy)), \
-	                   ZPixmap, 0, NULL, w, h, 32, 0);
-	if (img) {
-		img->data = malloc(img->bytes_per_line * h);
-		XInitImage(img);
-	}
-
-	return img;
-}
-
-void
-wincontent(Display *dpy, Window win, GC gci, GC gcl, XImage *src, XImage *img, \
-           int x, int y, int w, int h, int s, int mflag)
-{
-	int i, j, ii, jj;
-	unsigned long p;
-	w = MAX(s, w/s * s);
-	h = MAX(s, h/s * s);
-
-	XMoveResizeWindow(dpy, win, MINMAX(0, rootw(dpy) - w, x - w/2), \
-	                  MINMAX(0, rooth(dpy) - h, y - h/2), w, h);
-
-	for (i = 0; i < w/s; i++) {
-		for (j = 0; j < h/s; j++) {
-			p = XGetPixel(src, MINMAX(0, src->width - 1, x + i - w/s/2), \
-			              MINMAX(0, src->height - 1, y + j - h/s/2));
-			for (ii = 0; ii < s; ii++) for (jj = 0; jj < s; jj++)
-				XPutPixel(img, i*s + ii, j*s + jj, p);
-		}
-	}
-
-	XPutImage(dpy, win, gci, img, 0, 0, 0, 0, w, h);
-	if (!mflag)
-		XDrawRectangle(dpy, win, gcl, w/s/2*s, h/s/2*s, s, s);
-	XDrawRectangle(dpy, win, gcl, 0, 0, w-1, h-1);
-	XFlush(dpy);
-}
-
-void
-refresh(Display *dpy, Window win, XImage **orig)
-{
-	XUnmapWindow(dpy, win);
-	XSync(dpy, False);
-	XDestroyImage(*orig);
-	*orig = rootimg(dpy);
-	XMapWindow(dpy, win);
-}
-
-void
-printcolor(Display *dpy, XImage *img, int newline)
-{
-	XColor c;
-	c.pixel = XGetPixel(img, img->width/2, img->height/2);
-	XQueryColor(dpy, DefaultColormap(dpy, DefaultScreen(dpy)), &c);
-	printf("#%02x%02x%02x", c.red >> 8, c.green >> 8, c.blue >> 8);
-	if (newline)
-		putc('\n', stdout);
-}
-
-void
-focus(Display *dpy, Window win)
-{
-	static struct timespec ts = {.tv_sec = 0, .tv_nsec = 10000000};
-	Window current;
-	int i = 0;
-	while (i++ < 100) {
-		XGetInputFocus(dpy, &current, &(int){0});
-		if (current == win)
-			return;
-		XSetInputFocus(dpy, win, RevertToParent, CurrentTime);
-		nanosleep(&ts, NULL);
-	}
-}
-
-int
+long
 intarg(int *argc, char ***argv, char **opt)
 {
 	char *str, *end;
-	int ret;
+	long ret;
 
 	if ((*opt)[1]) {
 		str = *opt + 1;
@@ -136,7 +68,7 @@ intarg(int *argc, char ***argv, char **opt)
 		exit(1);
 	}
 
-	ret = (int)strtol(str, &end, 0);
+	ret = strtol(str, &end, 0);
 
 	if (*end) {
 		fprintf(stderr, "Cannot convert '%s' to int.\n", str);
@@ -146,22 +78,229 @@ intarg(int *argc, char ***argv, char **opt)
 	return ret;
 }
 
+void
+winchanged()
+{
+	int lw = MINMAX(scale, sw, w/scale * scale);
+	int lh = MINMAX(scale, sh, h/scale * scale);
+
+	if (img)
+		XDestroyImage(img);
+
+	img = XCreateImage(dpy, DefaultVisual(dpy, scr), DefaultDepth(dpy, scr), \
+	                   ZPixmap, 0, NULL, lw, lh, 32, 0);
+	if (img) {
+		img->data = malloc(img->bytes_per_line * lh);
+		XInitImage(img);
+	} else {
+		return;
+	}
+
+	wincontent();
+}
+
+void
+wincontent()
+{
+	int i, j, ii, jj;
+	unsigned long p;
+	int lw = MINMAX(scale, sw, w/scale * scale);
+	int lh = MINMAX(scale, sh, h/scale * scale);
+
+	XMoveResizeWindow(dpy, win, MINMAX(sx, sx + sw - lw, x - lw/2), \
+	                  MINMAX(sy, sy + sh - lh, y - lh/2), lw, lh);
+
+	for (i = 0; i < lw/scale; i++) {
+		for (j = 0; j < lh/scale; j++) {
+			p = XGetPixel(simg, MINMAX(0, sw - 1, x - sx + i - lw/scale/2), \
+			              MINMAX(0, sh - 1, y - sy + j - lh/scale/2));
+			for (ii = 0; ii < scale; ii++) for (jj = 0; jj < scale; jj++)
+				XPutPixel(img, i*scale + ii, j*scale + jj, p);
+		}
+	}
+
+	XPutImage(dpy, win, gci, img, 0, 0, 0, 0, lw, lh);
+	if (!opt_m)
+		XDrawRectangle(dpy, win, gcl, lw/scale/2*scale, \
+		               lh/scale/2*scale, scale, scale);
+	XDrawRectangle(dpy, win, gcl, 0, 0, lw-1, lh-1);
+	XFlush(dpy);
+}
+
+void
+refresh()
+{
+	XUnmapWindow(dpy, win);
+	XSync(dpy, False);
+	XDestroyImage(simg);
+	simg = XGetImage(dpy, swin, 0, 0, sw, sh, AllPlanes, ZPixmap);
+	XMapWindow(dpy, win);
+}
+
+void
+focus()
+{
+	struct timespec ts = {.tv_sec = 0, .tv_nsec = 10000000};
+	static int count = 0;
+	Window current;
+	int i = 0;
+
+	if (count++ > 100)
+		return;
+
+	while (i++ < 100) {
+		XGetInputFocus(dpy, &current, &(int){0});
+		if (current == win)
+			return;
+		XSetInputFocus(dpy, win, RevertToParent, CurrentTime);
+		XRaiseWindow(dpy, win);
+		nanosleep(&ts, NULL);
+	}
+}
+
+void
+printcolor(int newline)
+{
+	XColor c;
+	c.pixel = XGetPixel(img, img->width/2, img->height/2);
+	XQueryColor(dpy, DefaultColormap(dpy, scr), &c);
+	printf("#%02x%02x%02x", c.red >> 8, c.green >> 8, c.blue >> 8);
+	if (newline)
+		putc('\n', stdout);
+}
+
+void
+keypress(KeySym key)
+{
+	switch (key) {
+	case XK_Return:
+		done = 1;
+		printcolor(opt_n);
+		break;
+	case XK_space:
+		printcolor(1);
+		break;
+	/* XWarpPointer should generate MotionNotify */
+	case XK_k:
+	case XK_Up:
+		XWarpPointer(dpy, None, None, 0, 0, 0, 0, \
+			     0, -MAX(1, h/scale/2 - 3));
+		break;
+	case XK_j:
+	case XK_Down:
+		XWarpPointer(dpy, None, None, 0, 0, 0, 0, \
+			     0, MAX(1, h/scale/2 - 3));
+		break;
+	case XK_h:
+	case XK_Left:
+		XWarpPointer(dpy, None, None, 0, 0, 0, 0, \
+			     -MAX(1, w/scale/2 - 3), 0);
+		break;
+	case XK_l:
+	case XK_Right:
+		XWarpPointer(dpy, None, None, 0, 0, 0, 0, \
+			     MAX(1, w/scale/2 - 3), 0);
+		break;
+	case XK_r:
+		refresh();
+		wincontent();
+		break;
+	case XK_m:
+		opt_m ^= 1;
+		wincontent();
+		break;
+	case XK_t:
+		opt_r ^= 1;
+		break;
+	case XK_p:
+		w = h = MIN(w, h);
+		scale = MAX(1, w/9);
+		winchanged();
+		break;
+	case XK_i:
+		h += increment;
+		w += increment;
+		winchanged();
+		break;
+	case XK_d:
+		h = MAX(1, h - increment);
+		w = MAX(1, w - increment);
+		winchanged();
+		break;
+	case XK_minus:
+	case XK_s:
+		scale = MAX(1, scale - 1);
+		winchanged();
+		break;
+	case XK_equal:
+	case XK_o:
+		scale = scale + 1;
+		winchanged();
+		break;
+	case XK_1:
+		scale = 1;
+		winchanged();
+		break;
+	case XK_2:
+		scale = 2;
+		winchanged();
+		break;
+	case XK_3:
+		scale = 3;
+		winchanged();
+		break;
+	case XK_4:
+		scale = 4;
+		winchanged();
+		break;
+	case XK_5:
+		scale = 5;
+		winchanged();
+		break;
+	case XK_6:
+		scale = 6;
+		winchanged();
+		break;
+	case XK_7:
+		scale = 7;
+		winchanged();
+		break;
+	case XK_8:
+		scale = 8;
+		winchanged();
+		break;
+	case XK_9:
+		scale = 9;
+		winchanged();
+		break;
+	case XK_0:
+		scale = 10;
+		winchanged();
+		break;
+	case XK_Escape:
+	case XK_q:
+		done = 1;
+		break;
+	default:
+		fprintf(stderr, "Unknown key '%s'. Exitting.\n", \
+			XKeysymToString(key));
+		done = -1;
+		break;
+	}
+}
+
 int
 main(int argc, char *argv[])
 {
-	XImage *orig, *img;
-	Display *dpy;
-	Window win;
 	XSetWindowAttributes sattr;
-	XEvent ev;
-	GC gci, gcl;
+	XWindowAttributes attr;
 	XGCValues gcval;
-	Pixmap empty;
-	Cursor cursor;
+	XEvent ev;
 	struct pollfd fds[1];
 	struct sigaction action;
-	int grab, x, y, w = -30, h = -30, scale = 5, increment = -5;
-	int mflag = 0, rflag = 0, newline = 1, square = 1;
+	int grab, square = 1;
+	w = h = -30; scale = 5; increment = -5;
+	opt_n = 1; opt_m = 0; opt_r = 0;
 
 	cmd = argv[0];
 	for (argc--, argv++; argv[0]; argc--, argv++) {
@@ -172,17 +311,25 @@ main(int argc, char *argv[])
 		}
 		for (char *opt = ++argv[0]; opt[0]; opt++) {
 			switch (*opt) {
+			case 'a':
+				/* use the window under the pointer (see -f) */
+				swin = ~0;
+				break;
+			case 'f':
+				/* pick a color from a window, not root */
+				swin = intarg(&argc, &argv, &opt);
+				break;
 			case 'm':
 				/* use the program as a magnifier */
-				mflag = 1;
+				opt_m = 1;
 				break;
 			case 'n':
 				/* don't print a newline after the last color */
-				newline = 0;
+				opt_n = 0;
 				break;
 			case 'r':
 				/* refresh on pointer motion */
-				rflag = 1;
+				opt_r = 1;
 				break;
 			case 's':
 				/* magnification factor */
@@ -243,219 +390,130 @@ main(int argc, char *argv[])
 	sigaction(SIGINT, &action, NULL);
 	sigaction(SIGTERM, &action, NULL);
 
-	dpy = XOpenDisplay(NULL);
-	if (dpy == NULL) {
+	if (!(dpy = XOpenDisplay(NULL))) {
 		fputs("Failed to open display.\n", stderr);
 		return 1;
 	}
+	scr = DefaultScreen(dpy);
+	root = DefaultRootWindow(dpy);
 
-	if (increment < 0)
-		increment = -increment * MIN(rootw(dpy), rooth(dpy)) / 100;
-	if (square) {
-		if (w < 0)
-			w = h = -w * MIN(rootw(dpy), rooth(dpy)) / 100;
-	} else {
-		if (w < 0)
-			w = -w * rootw(dpy) / 100;
-		if (h < 0)
-			h = -h * rooth(dpy) / 100;
-	}
+	if (swin == ~0)
+		XQueryPointer(dpy, root, &(Window){0}, &swin, &x, &y, \
+		              &(int){0}, &(int){0}, &(unsigned int){0});
+	else
+		XQueryPointer(dpy, root, &(Window){0}, &(Window){0}, &x, &y, \
+		              &(int){0}, &(int){0}, &(unsigned int){0});
 
-	orig = rootimg(dpy);
-	if (orig == NULL) {
-		fputs("Failed to get root image.\n", stderr);
+	if (!swin)
+		swin = root;
+	if (!XGetWindowAttributes(dpy, swin, &attr)) {
+		fprintf(stderr, "Failed to get window attributes: 0x%lx.\n", swin);
 		done = -1;
 		goto close;
 	}
-	img = allocimg(dpy, w, h, scale);
-	if (img == NULL) {
-		fputs("Failed to create an auxiliary XImage.\n", stderr);
-		done = -1;
-		goto notimg;
+
+	sx = attr.x; sy = attr.y; sw = attr.width; sh = attr.height;
+
+	if (increment < 0)
+		increment = -increment * MIN(sw, sh) / 100;
+	if (square) {
+		if (w < 0)
+			w = h = -w * MIN(sw, sh) / 100;
+	} else {
+		if (w < 0)
+			w = -w * sw / 100;
+		if (h < 0)
+			h = -h * sh / 100;
 	}
 
-	empty = XCreateBitmapFromData(dpy, DefaultRootWindow(dpy), &(char){0}, 1, 1);
-	cursor = XCreatePixmapCursor(dpy, empty, empty, &(XColor){0}, &(XColor){0}, 0, 0);
+	if (x < sx || x >= sx + sw || y < sy || y >= sy + sh) {
+		x = sx + sw/2; y = sy + sh/2;
+		XWarpPointer(dpy, None, swin, 0, 0, 0, 0, sw/2, sh/2);
+	}
 
-	XQueryPointer(dpy, DefaultRootWindow(dpy), &(Window){0}, &(Window){0}, \
-	              &x, &y, &(int){0}, &(int){0}, &(unsigned int){0});
+
+	empty = XCreateBitmapFromData(dpy, root, &(char){0}, 1, 1);
+	cursor = XCreatePixmapCursor(dpy, empty, empty, &(XColor){0}, &(XColor){0}, 0, 0);
 
 	sattr.event_mask = ButtonPressMask | PointerMotionMask | KeyPressMask \
 	                   | FocusChangeMask;
-	sattr.background_pixel = BlackPixel(dpy, DefaultScreen(dpy));
+	sattr.background_pixel = BlackPixel(dpy, scr);
 	sattr.override_redirect = True;
 	sattr.cursor = cursor;
-	win = XCreateWindow(dpy, DefaultRootWindow(dpy), 0, 0, 1, 1, 0, \
-	                    CopyFromParent, InputOutput, CopyFromParent, CWEventMask \
-	                    | CWBackPixel | CWOverrideRedirect | CWCursor, &sattr);
+	win = XCreateWindow(dpy, root, 0, 0, 1, 1, 0, CopyFromParent, InputOutput, \
+	                    CopyFromParent, CWEventMask | CWBackPixel \
+	                    | CWOverrideRedirect | CWCursor, &sattr);
 	if (!win) {
-		fputs("Failed to create a window.\n", stderr);
+		fputs("Failed to create window.\n", stderr);
 		done = -1;
 		goto notwin;
 	}
 	XMapWindow(dpy, win);
-	focus(dpy, win);
+	focus();
 
 	gcval.function = GXcopy;
 	gcval.plane_mask = AllPlanes;
 	gcval.subwindow_mode = IncludeInferiors;
 	gcval.foreground = XWhitePixel(dpy, DefaultScreen(dpy));
 	gcval.background = XBlackPixel(dpy, DefaultScreen(dpy));
-	gci = XCreateGC(dpy, DefaultRootWindow(dpy), GCFunction | GCPlaneMask \
-			| GCSubwindowMode | GCForeground | GCBackground, &gcval);
+	gci = XCreateGC(dpy, root, GCFunction | GCPlaneMask | GCSubwindowMode \
+	                | GCForeground | GCBackground, &gcval);
 
 	gcval.function = GXxor;
 	gcval.line_width = 1;
-	gcl = XCreateGC(dpy, DefaultRootWindow(dpy), GCFunction | GCLineWidth \
-			| GCSubwindowMode | GCForeground | GCBackground, &gcval);
+	gcl = XCreateGC(dpy, root, GCFunction | GCLineWidth | GCSubwindowMode \
+	                | GCForeground | GCBackground, &gcval);
 
-	wincontent(dpy, win, gci, gcl, orig, img, x, y, w, h, scale, mflag);
+	if (!(simg = XGetImage(dpy, swin, 0, 0, sw, sh, AllPlanes, ZPixmap))) {
+		fputs("Failed to get source image.\n", stderr);
+		done = -1;
+		goto notsimg;
+	}
+	winchanged();
+	if (!img) {
+		fputs("Failed to create auxiliary XImage.\n", stderr);
+		done = -1;
+		goto notimg;
+	}
 
 	/* try to grab pointer to not let it out of the window */
 	grab = XGrabPointer(dpy, win, True, NoEventMask, GrabModeAsync, \
 	                    GrabModeAsync, win, None, CurrentTime);
+	if (grab != GrabSuccess)
+		fputs("Warning: did not grab the pointer.\n", stdout);
 
 	fds[0].fd = ConnectionNumber(dpy);
 	fds[0].events = POLLIN;
 	while (!done) {
 		poll(fds, 1, -1);
-		while (XPending(dpy)) {
+		while (!done && XPending(dpy)) {
 			XNextEvent(dpy, &ev);
 			switch (ev.type) {
 			case MotionNotify:
 				x = ev.xmotion.x_root;
 				y = ev.xmotion.y_root;
-				if (rflag)
-					refresh(dpy, win, &orig);
-				wincontent(dpy, win, gci, gcl, orig, img, \
-				           x, y, w, h, scale, mflag);
+				if (opt_r)
+					refresh();
+				wincontent();
 				break;
 			case ButtonPress:
 				if (ev.xbutton.button == Button4) {
 					scale = scale + 1;
-					goto changed;
+					winchanged();
 				} else if (ev.xbutton.button == Button5) {
 					scale = MAX(1, scale - 1);
-					goto changed;
+					winchanged();
 				} else if (ev.xbutton.button < Button4){
 					done = 1;
-					if (!mflag)
-						printcolor(dpy, img, newline);
+					if (!opt_m)
+						printcolor(opt_n);
 				}
 				break;
 			case KeyPress:
-				switch (XevKeysym(dpy, ev)) {
-				case XK_Return:
-					done = 1;
-					printcolor(dpy, img, newline);
-					break;
-				case XK_space:
-					printcolor(dpy, img, 1);
-					break;
-				/* XWrapPointer should generate MotionNotify */
-				case XK_k:
-				case XK_Up:
-					XWarpPointer(dpy, None, None, 0, 0, 0, 0, \
-					             0, -MAX(1, h/scale/2 - 3));
-					break;
-				case XK_j:
-				case XK_Down:
-					XWarpPointer(dpy, None, None, 0, 0, 0, 0, \
-					             0, MAX(1, h/scale/2 - 3));
-					break;
-				case XK_h:
-				case XK_Left:
-					XWarpPointer(dpy, None, None, 0, 0, 0, 0, \
-					             -MAX(1, w/scale/2 - 3), 0);
-					break;
-				case XK_l:
-				case XK_Right:
-					XWarpPointer(dpy, None, None, 0, 0, 0, 0, \
-					             MAX(1, w/scale/2 - 3), 0);
-					break;
-					break;
-				case XK_r:
-					refresh(dpy, win, &orig);
-					wincontent(dpy, win, gci, gcl, orig, img, \
-					           x, y, w, h, scale, mflag);
-					break;
-				case XK_m:
-					mflag = !mflag;
-					wincontent(dpy, win, gci, gcl, orig, img, \
-					           x, y, w, h, scale, mflag);
-					break;
-				case XK_t:
-					rflag = !rflag;
-					break;
-				case XK_p:
-					w = h = MIN(w, h);
-					scale = w/9;
-					goto changed;
-				case XK_i:
-					h += increment;
-					w += increment;
-					goto changed;
-				case XK_d:
-					h = MAX(1, h - increment);
-					w = MAX(1, w - increment);
-					goto changed;
-				case XK_minus:
-				case XK_s:
-					scale = MAX(1, scale - 1);
-					goto changed;
-				case XK_equal:
-				case XK_o:
-					scale = scale + 1;
-					goto changed;
-				case XK_1:
-					scale = 1;
-					goto changed;
-				case XK_2:
-					scale = 2;
-					goto changed;
-				case XK_3:
-					scale = 3;
-					goto changed;
-				case XK_4:
-					scale = 4;
-					goto changed;
-				case XK_5:
-					scale = 5;
-					goto changed;
-				case XK_6:
-					scale = 6;
-					goto changed;
-				case XK_7:
-					scale = 7;
-					goto changed;
-				case XK_8:
-					scale = 8;
-					goto changed;
-				case XK_9:
-					scale = 9;
-					goto changed;
-				case XK_0:
-					scale = 10;
-					goto changed;
-changed:
-					XDestroyImage(img);
-					img = allocimg(dpy, w, h, scale);
-					wincontent(dpy, win, gci, gcl, orig, img, \
-					           x, y, w, h, scale, mflag);
-					break;
-				case XK_Escape:
-				case XK_q:
-					done = 1;
-					break;
-				default:
-					fprintf(stderr, "Unknown key '%s'. Exitting.\n", \
-					        XKeysymToString(XevKeysym(dpy, ev)));
-					done = -1;
-					break;
-				}
+				keypress(XkbKeycodeToKeysym(dpy, ev.xkey.keycode, 0, 0));
 				break;
 			case FocusOut:
-				focus(dpy, win);
+				focus();
 				break;
 			default:
 				break;
@@ -463,16 +521,17 @@ changed:
 		}
 	}
 
-	XFreeGC(dpy, gcl);
-	XFreeGC(dpy, gci);
 	if (grab == GrabSuccess)
 		XUngrabPointer(dpy, CurrentTime);
+	XDestroyImage(img);
+notimg:
+	XDestroyImage(simg);
+notsimg:
+	XFreeGC(dpy, gcl);
+	XFreeGC(dpy, gci);
 	XDestroyWindow(dpy, win);
 notwin:
 	XFreeCursor(dpy, cursor);
-	XDestroyImage(img);
-notimg:
-	XDestroyImage(orig);
 close:
 	XCloseDisplay(dpy);
 
