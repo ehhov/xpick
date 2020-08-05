@@ -24,7 +24,7 @@ void wincontent(void);
 void refresh(void);
 void focus(void);
 void printcolor(int newline);
-void keypress(KeySym key);
+void keypress(XKeyEvent *ev);
 
 int done = 0;
 char *cmd;
@@ -170,8 +170,9 @@ printcolor(int newline)
 }
 
 void
-keypress(KeySym key)
+keypress(XKeyEvent *ev)
 {
+	KeySym key = XkbKeycodeToKeysym(dpy, ev->keycode, 0, 0);
 	switch (key) {
 	case XK_Return:
 		done = 1;
@@ -202,15 +203,16 @@ keypress(KeySym key)
 			     MAX(1, w/scale/2 - 3), 0);
 		break;
 	case XK_r:
-		refresh();
-		wincontent();
+		if (ev->state & ShiftMask) {
+			opt_r ^= 1;
+		} else {
+			refresh();
+			wincontent();
+		}
 		break;
 	case XK_m:
 		opt_m ^= 1;
 		wincontent();
-		break;
-	case XK_t:
-		opt_r ^= 1;
 		break;
 	case XK_p:
 		w = h = MIN(w, h);
@@ -218,11 +220,15 @@ keypress(KeySym key)
 		winchanged();
 		break;
 	case XK_i:
+		if (ev->state & ShiftMask)
+			scale = MAX(2, scale * (h + increment) / h);
 		h += increment;
 		w += increment;
 		winchanged();
 		break;
 	case XK_d:
+		if (ev->state & ShiftMask)
+			scale = MAX(1, scale * MAX(1, h - increment) / h);
 		h = MAX(1, h - increment);
 		w = MAX(1, w - increment);
 		winchanged();
@@ -276,6 +282,10 @@ keypress(KeySym key)
 	case XK_0:
 		scale = 10;
 		winchanged();
+		break;
+	/* Ignore Shift modifier keys */
+	case XK_Shift_L:
+	case XK_Shift_R:
 		break;
 	case XK_Escape:
 	case XK_q:
@@ -510,7 +520,7 @@ main(int argc, char *argv[])
 				}
 				break;
 			case KeyPress:
-				keypress(XkbKeycodeToKeysym(dpy, ev.xkey.keycode, 0, 0));
+				keypress(&ev.xkey);
 				break;
 			case FocusOut:
 				focus();
