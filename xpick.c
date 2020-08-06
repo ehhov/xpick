@@ -314,6 +314,7 @@ main(int argc, char *argv[])
 {
 	XSetWindowAttributes sattr;
 	XWindowAttributes attr;
+	XClassHint ch = {"xpick", "xpick"};
 	XGCValues gcval;
 	XEvent ev;
 	struct pollfd fds[1];
@@ -463,11 +464,7 @@ main(int argc, char *argv[])
 	win = XCreateWindow(dpy, root, 0, 0, 1, 1, 0, CopyFromParent, InputOutput, \
 	                    CopyFromParent, CWEventMask | CWBackPixel \
 	                    | CWOverrideRedirect | CWCursor, &sattr);
-	if (!win) {
-		fputs("Failed to create window.\n", stderr);
-		done = -1;
-		goto notwin;
-	}
+	XSetClassHint(dpy, win, &ch);
 	XMapWindow(dpy, win);
 	focus();
 
@@ -546,7 +543,6 @@ notsimg:
 	XFreeGC(dpy, gcl);
 	XFreeGC(dpy, gci);
 	XDestroyWindow(dpy, win);
-notwin:
 	XFreeCursor(dpy, cursor);
 close:
 	XCloseDisplay(dpy);
