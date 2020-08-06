@@ -23,6 +23,7 @@ void winchanged(void);
 void wincontent(void);
 void refresh(void);
 void focus(void);
+void grabpointer(void);
 void printcolor(int newline);
 void keypress(XKeyEvent *ev);
 
@@ -135,6 +136,7 @@ refresh()
 	XDestroyImage(simg);
 	simg = XGetImage(dpy, swin, 0, 0, sw, sh, AllPlanes, ZPixmap);
 	XMapWindow(dpy, win);
+	grabpointer();
 }
 
 void
@@ -156,6 +158,14 @@ focus()
 		XRaiseWindow(dpy, win);
 		nanosleep(&ts, NULL);
 	}
+}
+
+void
+grabpointer()
+{
+	if (XGrabPointer(dpy, win, True, NoEventMask, GrabModeAsync, \
+	                 GrabModeAsync, win, None, CurrentTime) != GrabSuccess)
+		fputs("Warning: cannot grab the pointer.\n", stdout);
 }
 
 void
@@ -308,7 +318,7 @@ main(int argc, char *argv[])
 	XEvent ev;
 	struct pollfd fds[1];
 	struct sigaction action;
-	int grab, square = 1;
+	int square = 1;
 	w = h = -30; scale = 5; increment = -5;
 	opt_n = 1; opt_m = 0; opt_r = 0;
 
@@ -486,11 +496,7 @@ main(int argc, char *argv[])
 		goto notimg;
 	}
 
-	/* try to grab pointer to not let it out of the window */
-	grab = XGrabPointer(dpy, win, True, NoEventMask, GrabModeAsync, \
-	                    GrabModeAsync, win, None, CurrentTime);
-	if (grab != GrabSuccess)
-		fputs("Warning: did not grab the pointer.\n", stdout);
+	grabpointer();
 
 	fds[0].fd = ConnectionNumber(dpy);
 	fds[0].events = POLLIN;
@@ -531,8 +537,8 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (grab == GrabSuccess)
-		XUngrabPointer(dpy, CurrentTime);
+	/* It can be called even when the pointer is not grabbed. */
+	XUngrabPointer(dpy, CurrentTime);
 	XDestroyImage(img);
 notimg:
 	XDestroyImage(simg);
