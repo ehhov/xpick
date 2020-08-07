@@ -3,7 +3,7 @@
 xpick \- a simple color picker for X
 .SH SYNOPSIS
 .B xpick
-.RB [ \-amnr ]
+.RB [ \-amnpr ]
 .RB [ \-s
 .IR scale ]
 .RB [ \-i
@@ -37,6 +37,11 @@ use the program as a magnifier only, do not print anything.
 .B \-n
 don't print a newline after the last color; useful for placing output to the 
 clipboard.
+.TP
+.B \-p
+return focus to the prevoiusly focused window on exit. Note that if this window 
+was destroyed and no other window tried to gain focus, then \fBxpick\fR will 
+not finish correctly.
 .TP
 .B \-r
 refresh the screen image (which is shown magnified) on mouse motion.

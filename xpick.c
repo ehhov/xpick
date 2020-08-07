@@ -35,9 +35,11 @@ GC gci, gcl;
 Pixmap empty;
 Cursor cursor;
 Window win = 0, swin = 0, root;
+Window prevfocus;
+int prevrevertto;
 int scr, sx, sy, sw, sh;
 int x, y, w, h, scale, increment;
-int opt_n, opt_m, opt_r;
+int opt_n, opt_m, opt_p, opt_r;
 
 void
 finish(int signal)
@@ -48,7 +50,7 @@ finish(int signal)
 void
 usage(FILE *output)
 {
-	fprintf(output, "Usage: %s [-amnr] [-s scale] [-i increment] [-l length]" \
+	fprintf(output, "Usage: %s [-amnpr] [-s scale] [-i increment] [-l length]" \
 	                " [-w width] [-g height] [-f windowid] [-h]\n", cmd);
 }
 
@@ -145,15 +147,17 @@ focus()
 	struct timespec ts = {.tv_sec = 0, .tv_nsec = 10000000};
 	static int count = 0;
 	Window current;
-	int i = 0;
+	int i = 0, revertto;
 
 	if (count++ > 100)
 		return;
 
 	while (i++ < 100) {
-		XGetInputFocus(dpy, &current, &(int){0});
+		XGetInputFocus(dpy, &current, &revertto);
 		if (current == win)
 			return;
+		prevfocus = current;
+		prevrevertto = revertto;
 		XSetInputFocus(dpy, win, RevertToParent, CurrentTime);
 		XRaiseWindow(dpy, win);
 		nanosleep(&ts, NULL);
@@ -321,7 +325,7 @@ main(int argc, char *argv[])
 	struct sigaction action;
 	int square = 1;
 	w = h = -30; scale = 5; increment = -5;
-	opt_n = 1; opt_m = 0; opt_r = 0;
+	opt_n = 1; opt_m = 0; opt_p = 0; opt_r = 0;
 
 	cmd = argv[0];
 	for (argc--, argv++; argv[0]; argc--, argv++) {
@@ -339,6 +343,10 @@ main(int argc, char *argv[])
 			case 'f':
 				/* pick a color from a window, not root */
 				swin = intarg(&argc, &argv, &opt);
+				break;
+			case 'p':
+				/* return focus to the previous window on exit */
+				opt_p = 1;
 				break;
 			case 'm':
 				/* use the program as a magnifier */
@@ -533,6 +541,9 @@ main(int argc, char *argv[])
 			}
 		}
 	}
+
+	if (opt_p)
+		XSetInputFocus(dpy, prevfocus, prevrevertto, CurrentTime);
 
 	/* It can be called even when the pointer is not grabbed. */
 	XUngrabPointer(dpy, CurrentTime);
