@@ -1,4 +1,4 @@
-PREFIX = /opt/local
+PREFIX = /usr/local
 MANPREFIX = ${PREFIX}/share/man
 
 CC = cc

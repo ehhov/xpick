@@ -1,3 +1,7 @@
 Find a faster way to magnify the image.
 
 Refresh the image so that nothing flickers.
+
+Catch DestroyNotify events of the source window if not root, and finish.
+
+Catch DestroyNotify events of the previously focused window.
